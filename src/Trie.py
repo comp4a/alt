@@ -1,17 +1,41 @@
-
-# estructura para crear un trie
 class TrieNode(object):
-    indice = 0
     def __init__(self, char):
-        self.char = char 
+        self.indice = 0
+        self.char = char
         self.children = []
+        self.father = None
         self.word_finished = False
-        self.word=""
+        self.word= None
         self.counter = 1
 
-    def add(self, word):
+    def pull(self,ind):
+        if(self.indice == ind):
+            return self
+        else:
+            for nodeChild in self.children:
+                if nodeChild.indice <= ind:
+                    return nodeChild.pull(ind)
 
-        node = self
+                
+    def toString(self):
+        word = ""
+        res = ""
+        if(self.word_finished):
+            word= str(self.word)
+        res =  str(self.indice)+" " +self.char + "  " + str(self.counter) + "  "+str(self.word_finished)+"   " + word + "\n"
+
+        for node in self.children:
+            res = res + node.toString()
+        
+        return res  
+        
+class Trie(object):
+    def __init__(self):
+        self.size = 0
+        self.node = TrieNode('')
+        
+    def add(self, word):
+        node = self.node
         for char in word:
             found_in_child = False
             for child in node.children:
@@ -25,19 +49,29 @@ class TrieNode(object):
                 new_node = TrieNode(char)
                 node.children.append(new_node)
                 node.counter += 1
+                new_node.father = node
                 node = new_node
-                TrieNode.indice += 1
-                node.indice =TrieNode.indice
-                
-        
+                self.size += 1
+                node.indice = self.size
         node.word_finished = True
         node.word = word
 
     def toString(self):
-        word = ""
-        if(self.word_finished):
-            word= str(self.word)
-        print(str(self.indice)+" " +self.char + "  " + str(self.counter) + "  "+str(self.word_finished)+"   " + word)
-        
-        for node in self.children:
-            node.toString()
+        node = self.node
+        return node.toString()
+
+    def pull(self,ind):
+        node = self.node
+        return node.pull(ind)
+    
+
+
+                    
+trie = Trie()
+trie.add("caro")
+trie.add("cara")
+trie.add("codo")
+trie.add("caros")
+
+print(trie.toString())
+trie.pull(9).char
