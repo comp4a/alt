@@ -20,9 +20,9 @@ def clean_text(text):
     # Se quitan caracteres de puntuación
     text = clean_re.sub(' ', text)
     # Se quitan los acentos, dieresis etc.
-    trans_tab = dict.fromkeys(map(ord, u'\u0301\u0308'), None)
-    text = normalize('NFKC', normalize('NFKD', unicode(text)).translate(trans_tab))
-    text = str(text)
+    #trans_tab = dict.fromkeys(map(ord, u'\u0301\u0308'), None)
+    #text = normalize('NFKC', normalize('NFKD', unicode(text)).translate(trans_tab))
+    #text = str(text)
     # Se pasa a minúsculas
     return text.lower()
 
