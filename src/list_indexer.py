@@ -7,15 +7,17 @@ Alumnos:
 	Risheng Ye
 
 Descripción:
-     Recibe una lista de palabras y genera un trie con ellas
-     y lo guarda en un archivo
+    Genera un archivo indice que alamcena una lista ordenada de
+    las palabras que aparecen en el texto. Los caracteres de
+    puntuacion y los acentos son eliminados y la coimpletidud del texto
+    es tratado como palabras en minusculas
 """
 import unicodedata
-import time
 import re
 import pickle
 import sys
-from trie import Trie
+import time
+from bisect import insort_left, bisect_left
 
 clean_re = re.compile('\W+')
 
@@ -44,14 +46,18 @@ def save_object(object, file_name):
         pickle.dump(object, fh)
 
 
-def trie_indexation(docdir: str):
-    trie = Trie()
+def list_indexation(docdir: str):
+    word_list = []
     with open(docdir, 'r') as fh:
         text = fh.read()
         words = split_text(text)
         for word in words:
-            trie + word
-    return trie
+            index = bisect_left(word_list, word)
+            if index > len(word_list) - 1:
+                word_list.insert(index, word)
+            elif word_list[index] != word:
+                word_list.insert(index, word)
+    return word_list
 
 
 if __name__ == '__main__':
@@ -62,9 +68,9 @@ if __name__ == '__main__':
         print("Incorrect use of syntax")
 
     start = time.time()
-    t = trie_indexation(docdir)
+    l = list_indexation(docdir)
     finish = time.time()
-    save_object(t, indexdir)
+    save_object(l, indexdir)
 
-    print(t)
+    print(l)
     print("Time: ", finish - start)

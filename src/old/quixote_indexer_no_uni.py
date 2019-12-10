@@ -16,6 +16,7 @@ from bisect import insort
 from unicodedata import normalize
 
 clean_re = re.compile('\W+')
+
 def clean_text(text):
     # Se quitan caracteres de puntuación
     text = clean_re.sub(' ', text)
@@ -37,9 +38,9 @@ def doc_walker(docdir, indexdir):
         text = fh.read()
         text = clean_text(text)
         content = split_text(text)
-        pos = 0;
+        pos = 0
         for word in content:
-            pos = pos + 1;
+            pos = pos + 1
             current_word_positions = index_of_words.get(word, "")
             if not current_word_positions:
                 index_of_words[word] = [pos]
