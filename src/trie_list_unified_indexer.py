@@ -18,7 +18,7 @@ import unicodedata
 import re
 import pickle
 import time
-from bisect import insort_left, bisect_left
+from bisect import bisect_left
 from trie import Trie
 
 clean_re = re.compile('\W+')
@@ -33,7 +33,7 @@ def strip_accents(text):
 
 def clean_text(text):
     text = clean_re.sub(' ', text)
-    text = strip_accents(text)
+    #text = strip_accents(text)
     return text.lower()
 
 
@@ -76,6 +76,7 @@ if __name__ == "__main__":
         triedir = sys.argv[3]
     else:
         print("Incorrect use of syntax")
+        sys.exit()
 
     time_start = time.time()
     index_list = list_indexation(docdir)

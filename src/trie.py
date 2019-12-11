@@ -36,10 +36,13 @@ class TrieNode:
     depth: int = 0
     node_id: int = 0
 
-    # To change the to_string redefine magic method __repr__
     def __repr__(self):
-        return "ID: " + str(self.node_id) + "\n\tDepth: " + str(self.depth) + "\n\tChar: " + self.char + "\n\tChildren: "\
-              + str(list(self.children.keys())) + "\n\tIt is an End State: " + str(self.end_state)
+        res = "ID: " + str(self.node_id) + "\n\tDepth: " + str(self.depth) +\
+               "\n\tChar: " + self.char + "\n\tChildren: ["
+        for child in self.children.keys():
+            res += " ({}):{}".format(self.children[child].node_id, child)
+        res += " ]\n\tIt is an End State: " + str(self.end_state)
+        return res
 
 
 @dataclass
