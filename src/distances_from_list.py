@@ -1,6 +1,7 @@
 import sys
 import pickle
-from distences.pd_lev_str import get_distances, get_words_with_min_distance
+from distences.pd_lev_str import get_distances as lev, get_words_with_max_distance as lev_with_max
+from distences.pd_dam_str import get_distances as dam, get_words_with_max_distance as dam_with_max
 
 
 if __name__=="__main__":
@@ -17,10 +18,16 @@ if __name__=="__main__":
     with open(listdir, "rb") as fh:
         l = pickle.load(fh)
     if not dist:
-        print(get_distances(l, word))
+        print(lev(l, word))
+        print(dam(l, word))
     else:
-        dl = get_words_with_min_distance(l, word, dist)
-        msg = "{}\t{}\t".format(word, len(dl))
+        dl = lev_with_max(l, word, dist)
+        dd = dam_with_max(l, word, dist)
+        msgl = "{}\t{}\t".format(word, len(dl))
+        msgd = "{}\t{}\t".format(word, len(dd))
         for d, w in dl:
-            msg += " " + w
-        print(msg)
+            msgl += " " + w
+        print(msgl)
+        for d, w in dd:
+            msgd += " " + w
+        print(msgd)
