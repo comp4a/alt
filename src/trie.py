@@ -57,9 +57,13 @@ class Trie(object):
 
     size : int
         Amount of nodes of the trie
+
+    depth : int
+        Length of the largest word included
     """
     root: TrieNode = field(default=TrieNode())
     size: int = 0
+    depth: int = 0
 
     def add(self, word: str):
         """
@@ -78,6 +82,8 @@ class Trie(object):
                 self.size += 1
                 next_node = TrieNode(c, {}, current_node, False, current_node.depth + 1, self.size)
                 current_node.children[c] = next_node
+                if current_node.depth > self.depth:
+                    self.depth = current_node.depth
             current_node = next_node
         current_node.end_state = True
 
@@ -85,7 +91,7 @@ class Trie(object):
         self.add(word)
 
     def __repr__(self):
-        res = "TrieNode\nSize: " + str(self.size)
+        res = "TrieNode\nSize:\t" + str(self.size) + "Depth: " + str(self.depth)
         res += "\nAllNodes:\n========\n" + str(self.root)
         opened = list(self.root.children.values())
         while opened:
