@@ -65,7 +65,7 @@ def list_indexation(docdir: str):
 def trie_indexation(index_list: list):
     trie = Trie()
     for word in index_list:
-        trie + str(word)
+        trie.add(str(word))
     return trie
 
 

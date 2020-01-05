@@ -50,7 +50,7 @@ def trie_indexation(docdir: str):
         text = fh.read()
         words = split_text(text)
         for word in words:
-            trie + word
+            trie.add(word)
     return trie
 
 

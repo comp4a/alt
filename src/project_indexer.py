@@ -2,65 +2,45 @@
 """
 Alumnos:
 	Miguel Edo Goterris
-	Andrey Kramer Savelev
+
 	Luis Serrano Hernández
 	Risheng Ye
 
-Ampliaciones hechas:
-	permuterms
-	indices adicionales
-	busqueda de varios terminos consecutivos
-	parentesis
 """
 
-import re
+from trie import TrieDict, Trie
+from text_cleaner import split_text as clean_text
 import sys
 import pickle
 import os
 import json
-# insort permite insertar elementos de forma ordenada partiendo de una lista que ya lo está
 from bisect import insort
-from unicodedata import normalize
 
-clean_re = re.compile('\W+')
-def clean_text(text):
-    # Se quitan caracteres de puntuación
-    text = clean_re.sub(' ', text)
-    # Se quitan los acentos, dieresis etc.
-    trans_tab = dict.fromkeys(map(ord, u'\u0301\u0308'), None)
-    text = normalize('NFKC', normalize('NFKD', text).translate(trans_tab))
-    # Se pasa a minúsculas
-    return text.lower()
 
-def split_text(text):
-    # Consideraremos separadores de términos los espacios, los saltos de línea y los tabuladores
-    return [i for i in re.split(' |\n|\t',text) if i]
-    
 def save_object(object, file_name):
     with open(file_name, 'wb') as fh:
         pickle.dump(object, fh)
+
 
 def load_json(filename):
     with open(filename) as fh:
         obj = json.load(fh)
     return obj
 
+
 def index_term(term, newsid, position, index_term2news, index_permuterm):
-    newsdic = index_term2news.get(term)
-    # Si no hay noticias registradas para el término
-    if not newsdic:
-        # Se obtienen sus permutaciones
-        permuterm_indexer(term, index_permuterm)
-        index_term2news[term] = {newsid:[position]}
-    # Si ya hay noticias registradas para el término
-    else:
-        if newsid in newsdic.keys():
-            poslist = newsdic[newsid]
-            poslist.append(position)
-            newsdic[newsid] = poslist
+    end_node = index_term2news.reach_node(term)
+    newsdic = end_node.content
+    if newsdic:
+        poslist = newsdic.get(newsid, None)
+        if poslist:
+            newsdic[newsid] = poslist.append(position)
         else:
             newsdic[newsid] = [position]
-        index_term2news[term] = newsdic
+        end_node.content = newsdic
+    else:
+        permuterm_indexer(term, index_permuterm)
+        end_node.content = {newsid:[position]}
 
 def index_titleterm(term, newsid, index_titleterm2news):
     # Si el término es nuevo se obtienen sus permutaciones
@@ -72,18 +52,16 @@ def index_titleterm(term, newsid, index_titleterm2news):
         newslist.append(newsid)
         index_titleterm2news[term] = newslist
 
+
 def index_keyword(keyword, newsid, index_keyword2news):
-    keywordlist = index_keyword2news.get(keyword)
-    # Si la categoría es nueva
-    if not keywordlist:
-        index_keyword2news[keyword] = [newsid]
-    # Si ya existían noticias con esta categoría
-    else:
-        keywordlist.append(newsid)
-        index_keyword2news[keyword] = keywordlist
+    end_node = index_keyword2news.reach_node(keyword)
+    if end_node.content:
+        end_node.content.append(newsid)
+    else
+        end_node.content = [newsid]
 
 def index_date(date, newsid, index_date2news):
-    datelist = index_date2news.get(date) 
+    datelist = index_date2news.get(date)
     # Si la fecha es nueva
     if not datelist:
         index_date2news[date] = [newsid]
@@ -91,6 +69,25 @@ def index_date(date, newsid, index_date2news):
     else:
         datelist.append(newsid)
         index_date2news[date] = datelist
+
+
+def permuterm_indexer(term: str, permutation_trie: TrieDict):
+    """
+    DESCRIPCIÓN:
+
+        Obtiene todas las rotaciones del término y las añade al trie de rotaciones global.
+
+    PARAMETROS:
+
+        - term -> Término a permutar
+
+        - permutation_trie -> Trie containing the permutations an their corresponding original word
+
+    """
+    term_aux = term + '$'
+    for i in range(0, len(term_aux)):
+        permutation = term_aux[i:] + term_aux[:i]
+        permutation_trie.add(permutation, term)
 
 def doc_walker(docsdir, indexdir):
     """
@@ -110,16 +107,16 @@ def doc_walker(docsdir, indexdir):
     # Diccionario : newsid -> (docid, pos)
     index_news2docid = {}
     # Diccionario : term -> [newsid] -> [pos]
-    index_term2news = {}
+    index_term2news = TrieDict()
     # Lista de de permutaciones. Cada permutación apunta a los términos de los que puede provenir.
     # Puede haber tuplas con la misma permutación, pero tendrán distinto término.
-    index_permuterm = []
+    index_permuterm = TrieDict()
     # Diccionario : date -> newsid
     index_date2news = {}
     # Diccionario : keywords -> newsid
-    index_keyword2news = {}
+    index_keyword2news = TrieDict()
     # Diccionario : titleterm -> newsid
-    index_titleterm2news = {}
+    index_titleterm2news = TrieDict()
     docid = 1
     newsid = 1
     # Una iteración por cada carpeta en el directorio
@@ -128,22 +125,21 @@ def doc_walker(docsdir, indexdir):
         for filename in files:
             fullname = os.path.join(dirname, filename)
             noticias = load_json(fullname)
-            index_docid2path[docid] = fullname
+            index_docid2path.add(docid, fullname)
             posindoc = 1
             # Una iteración por cada noticia dentro del fichero
             for noticia in noticias:
                 # Extracción de partes de la noticia
-                index_news2docid[newsid] = (docid, posindoc)
+                index_news2docid.add(newsid, (docid, posindoc))
                 content = noticia["article"]
                 title = noticia["title"]
                 categorias = noticia["keywords"]
                 date = noticia["date"]
                 # Obtención de tokens
                 content = clean_text(content)
-                content = split_text(content)
-                categorias = split_text(clean_text(categorias))
-                title = split_text(clean_text(title))
-                position = 1                
+                categorias = clean_text(categorias)
+                title = clean_text(title)
+                position = 1
                 # Una iteración por cada término dentro de la noticia
                 for term in content:
                     # Indexación del término en el índice de término -> (noticia, posición)
@@ -152,56 +148,34 @@ def doc_walker(docsdir, indexdir):
                 # Una iteración por cada término dentro del título de la noticia
                 for titleterm in title:
                     # Indexación del término en el índice de términos en títulos
-                    index_titleterm(titleterm, newsid,  index_titleterm2news)
+                    index_titleterm(titleterm, newsid, index_titleterm2news)
                 # Una iteración por cada categoría de la noticia
                 for keyword in categorias:
                     # Indexación de la categoría
                     index_keyword(keyword, newsid, index_keyword2news)
                 # Indexación de la fecha
-                index_date(date, newsid, index_date2news)     
+                index_date(date, newsid, index_date2news)
                 newsid = newsid + 1
                 posindoc = posindoc + 1
             docid = docid + 1
 
-    objects2save = (index_news2docid, index_docid2path, index_term2news, index_permuterm, index_titleterm2news,index_date2news,index_keyword2news)
+    objects2save = (
+        index_news2docid, index_docid2path, index_term2news, index_permuterm, index_titleterm2news, index_date2news,
+        index_keyword2news)
     save_object(objects2save, indexdir)
 
-def permuterm_indexer(term, permutation_list):
-    """
-    DESCRIPCIÓN:
-
-        Obtiene todas las rotaciones del término y las añade a la lista de rotaciones global. La
-        inserción se hace de forma ordenada
-
-    PARAMETROS:
-
-        - term -> Término a permutar
-
-        - permutation_list -> Lista ordenada alfabéticamente de las permutaciones de todos lo
-        términos analizados hasat el momento
-
-    NOTA:
-
-        El hecho de que la lista sea ordenada no sólo ayuda a que la búsqueda sea más sencilla
-        y eficiente, también permite una inserción ordenada muy rápida
-    
-    """
-    term_aux = term + '$'
-    for i in range(0, len(term_aux)):
-        permutation = term_aux[i:] + term_aux[:i]
-        insort(permutation_list,(permutation, term))
-
 def syntax():
-    print("Use the correct syntax:\n\t-First argument:Path of the collection\n\t-Second Argument:Path to save the index")
+    print(
+        "Use the correct syntax:\n\t-First argument:Path of the collection\n\t-Second Argument:Path to save the index")
     sys.exit()
-    
+
+
 if __name__ == '__main__':
-    
+
     if len(sys.argv) > 2:
         docsdir = sys.argv[1]
         indexdir = sys.argv[2]
     else:
         syntax()
-    
-    doc_walker(docsdir, indexdir)
 
+    doc_walker(docsdir, indexdir)
