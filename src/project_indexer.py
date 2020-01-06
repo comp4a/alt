@@ -14,8 +14,6 @@ import sys
 import pickle
 import os
 import json
-from bisect import insort
-
 
 def save_object(object, file_name):
     with open(file_name, 'wb') as fh:
@@ -29,7 +27,8 @@ def load_json(filename):
 
 
 def index_term(term, newsid, position, index_term2news, index_permuterm):
-    end_node = index_term2news.reach_node(term)
+    print(term)
+    end_node = index_term2news.reach_node(term, True)
     newsdic = end_node.content
     if newsdic:
         poslist = newsdic.get(newsid, None)
@@ -39,25 +38,27 @@ def index_term(term, newsid, position, index_term2news, index_permuterm):
             newsdic[newsid] = [position]
         end_node.content = newsdic
     else:
+        end_node.content = {newsid: [position]}
         permuterm_indexer(term, index_permuterm)
-        end_node.content = {newsid:[position]}
+
 
 def index_titleterm(term, newsid, index_titleterm2news):
-    # Si el término es nuevo se obtienen sus permutaciones
-    newslist = index_titleterm2news.get(term)
+    end_node = index_titleterm2news.reach_node(term, True)
+    newslist = end_node.content
     if not newslist:
-        index_titleterm2news[term] = [newsid]
-    # Si ya hay noticias registradas para el término
+        end_node.content = [newsid]
     else:
         newslist.append(newsid)
-        index_titleterm2news[term] = newslist
+        end_node.content = newslist
 
 
 def index_keyword(keyword, newsid, index_keyword2news):
     end_node = index_keyword2news.reach_node(keyword)
-    if end_node.content:
-        end_node.content.append(newsid)
-    else
+    newslist = end_node.content
+    if newslist:
+        newslist.append(newsid)
+        end_node.content = newslist
+    else:
         end_node.content = [newsid]
 
 def index_date(date, newsid, index_date2news):
@@ -125,23 +126,23 @@ def doc_walker(docsdir, indexdir):
         for filename in files:
             fullname = os.path.join(dirname, filename)
             noticias = load_json(fullname)
-            index_docid2path.add(docid, fullname)
+            index_docid2path[docid] = fullname
             posindoc = 1
             # Una iteración por cada noticia dentro del fichero
             for noticia in noticias:
                 # Extracción de partes de la noticia
-                index_news2docid.add(newsid, (docid, posindoc))
-                content = noticia["article"]
+                index_news2docid[newsid] = (docid, posindoc)
+                contenido = noticia["article"]
                 title = noticia["title"]
                 categorias = noticia["keywords"]
                 date = noticia["date"]
                 # Obtención de tokens
-                content = clean_text(content)
+                contenido = clean_text(contenido)
                 categorias = clean_text(categorias)
                 title = clean_text(title)
                 position = 1
                 # Una iteración por cada término dentro de la noticia
-                for term in content:
+                for term in contenido:
                     # Indexación del término en el índice de término -> (noticia, posición)
                     index_term(term, newsid, position, index_term2news, index_permuterm)
                     position = position + 1
@@ -160,8 +161,8 @@ def doc_walker(docsdir, indexdir):
             docid = docid + 1
 
     objects2save = (
-        index_news2docid, index_docid2path, index_term2news, index_permuterm, index_titleterm2news, index_date2news,
-        index_keyword2news)
+        index_news2docid, index_docid2path, index_term2news, index_permuterm,
+        index_titleterm2news, index_date2news, index_keyword2news)
     save_object(objects2save, indexdir)
 
 def syntax():
