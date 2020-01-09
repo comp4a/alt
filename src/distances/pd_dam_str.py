@@ -30,7 +30,7 @@ def damerau_levenshtein_distance(x: str, y: str):
     return current_row[len(x)]
 
 
-def get_distances(index_list: list, word: str):
+def get_distances(word: str, index_list: list):
     distances_list = []
     for w in index_list:
         d = damerau_levenshtein_distance(w, word)

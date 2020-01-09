@@ -1,8 +1,9 @@
 import numpy as np
 from trie import Trie
+from math import inf
 
 
-def get_levenshtein_distances(x: str, trie: Trie, dist_max:int = 999):
+def get_levenshtein_distances(x: str, trie: Trie, dist_max:int = inf):
     root = trie.root
     root_id = root.node_id
     current_rows = {}

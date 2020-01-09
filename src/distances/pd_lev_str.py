@@ -3,9 +3,6 @@ from bisect import bisect_left
 
 
 def levenshtein_distance(x: str, y: str, show_table: bool = False):
-    if show_table:
-        print("###################\n{} - {}\n###################".format(x,y))
-
     current_row = np.zeros((1 + len(x)))
     previous_row = np.zeros((1 + len(x)))
     for i in range(1, len(x) + 1):
@@ -22,7 +19,7 @@ def levenshtein_distance(x: str, y: str, show_table: bool = False):
     return current_row[len(x)]
 
 
-def get_distances(index_list: list, word: str):
+def get_distances(word: str, index_list: list):
     distances_list = []
     for w in index_list:
         d = levenshtein_distance(w, word)

@@ -1,10 +1,10 @@
 import sys
 import pickle
 from random import randint
-from distences.pd_lev_trie import get_levenshtein_distances as levT
-from distences.pd_dam_trie import get_damerau_levenshtein_distances as damT
-from distences.pd_lev_str import get_words_with_max_distance as levL
-from distences.pd_dam_str import get_words_with_max_distance as damL
+from distances.pd_lev_trie import get_levenshtein_distances as levT
+from distances.pd_dam_trie import get_damerau_levenshtein_distances as damT
+from distances.pd_lev_str import get_words_with_max_distance as levL
+from distances.pd_dam_str import get_words_with_max_distance as damL
 
 if __name__=="__main__":
     palabra = "casa"
