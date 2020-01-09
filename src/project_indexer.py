@@ -8,12 +8,13 @@ Alumnos:
 
 """
 
-from trie import TrieDict, Trie
+from trie import TrieDict, Trie, TrieNode
 from text_cleaner import split_text as clean_text
 import sys
 import pickle
 import os
 import json
+
 
 def save_object(object, file_name):
     with open(file_name, 'wb') as fh:
@@ -26,50 +27,56 @@ def load_json(filename):
     return obj
 
 
-def index_term(term, newsid, position, index_term2news, index_permuterm):
-    print(term)
-    end_node = index_term2news.reach_node(term, True)
-    newsdic = end_node.content
-    if newsdic:
+def index_term(term, newsid, position, index, index_perm):
+    end_node = index.reach_node(term)
+    if end_node:
+        newsdic = end_node.content
         poslist = newsdic.get(newsid, None)
-        if poslist:
-            newsdic[newsid] = poslist.append(position)
+        if not poslist:
+            poslist = [position]
         else:
-            newsdic[newsid] = [position]
+            poslist += [position]
+        newsdic[newsid] = poslist
         end_node.content = newsdic
     else:
-        end_node.content = {newsid: [position]}
-        permuterm_indexer(term, index_permuterm)
+        index.add(term, {newsid: [position]})
+        permuterm_indexer(term, index_perm)
 
 
-def index_titleterm(term, newsid, index_titleterm2news):
-    end_node = index_titleterm2news.reach_node(term, True)
-    newslist = end_node.content
-    if not newslist:
-        end_node.content = [newsid]
+def index_titleterm(term, position, newsid, index):
+    end_node = index.reach_node(term)
+    if end_node:
+        newsdic = end_node.content
+        poslist = newsdic.get(newsid, None)
+        if not poslist:
+            poslist = [position]
+        else:
+            poslist += [position]
+        newsdic[newsid] = poslist
+        end_node.content = newsdic
     else:
-        newslist.append(newsid)
-        end_node.content = newslist
+        index.add(term, {newsid: [position]})
 
 
-def index_keyword(keyword, newsid, index_keyword2news):
-    end_node = index_keyword2news.reach_node(keyword)
-    newslist = end_node.content
-    if newslist:
-        newslist.append(newsid)
+def index_keyword(keyword, newsid, index):
+    end_node = index.reach_node(keyword)
+    if end_node and end_node.content:
+        newslist = end_node.content
+        newslist += [newsid]
         end_node.content = newslist
     else:
-        end_node.content = [newsid]
+        index.add(keyword, [newsid])
 
-def index_date(date, newsid, index_date2news):
-    datelist = index_date2news.get(date)
+
+def index_date(date, newsid, index):
+    datelist = index.get(date)
     # Si la fecha es nueva
     if not datelist:
-        index_date2news[date] = [newsid]
+        index[date] = [newsid]
     # Si ya existían noticias con esta fecha
     else:
         datelist.append(newsid)
-        index_date2news[date] = datelist
+        index[date] = datelist
 
 
 def permuterm_indexer(term: str, permutation_trie: TrieDict):
@@ -90,7 +97,9 @@ def permuterm_indexer(term: str, permutation_trie: TrieDict):
         permutation = term_aux[i:] + term_aux[:i]
         permutation_trie.add(permutation, term)
 
+
 def doc_walker(docsdir, indexdir):
+    print("Iniciando el indexado de los documentos")
     """
     DESCRIPCIÓN:
 
@@ -108,16 +117,19 @@ def doc_walker(docsdir, indexdir):
     # Diccionario : newsid -> (docid, pos)
     index_news2docid = {}
     # Diccionario : term -> [newsid] -> [pos]
-    index_term2news = TrieDict()
+    index_term2news = TrieDict(root=TrieNode(node_id=-2))
     # Lista de de permutaciones. Cada permutación apunta a los términos de los que puede provenir.
     # Puede haber tuplas con la misma permutación, pero tendrán distinto término.
-    index_permuterm = TrieDict()
+    index_permuterm = TrieDict(root=TrieNode(node_id=-1))
     # Diccionario : date -> newsid
     index_date2news = {}
     # Diccionario : keywords -> newsid
-    index_keyword2news = TrieDict()
+    index_keyword2news = TrieDict(root=TrieNode(node_id=-3))
     # Diccionario : titleterm -> newsid
-    index_titleterm2news = TrieDict()
+    index_titleterm2news = TrieDict(root=TrieNode(node_id=-4))
+
+    # Directorio actual para referenciar los archivos de los documentos
+    cwd = os.getcwd()
     docid = 1
     newsid = 1
     # Una iteración por cada carpeta en el directorio
@@ -126,7 +138,7 @@ def doc_walker(docsdir, indexdir):
         for filename in files:
             fullname = os.path.join(dirname, filename)
             noticias = load_json(fullname)
-            index_docid2path[docid] = fullname
+            index_docid2path[docid] = cwd + '/' + fullname
             posindoc = 1
             # Una iteración por cada noticia dentro del fichero
             for noticia in noticias:
@@ -147,9 +159,11 @@ def doc_walker(docsdir, indexdir):
                     index_term(term, newsid, position, index_term2news, index_permuterm)
                     position = position + 1
                 # Una iteración por cada término dentro del título de la noticia
+                position = 1
                 for titleterm in title:
                     # Indexación del término en el índice de términos en títulos
-                    index_titleterm(titleterm, newsid, index_titleterm2news)
+                    index_titleterm(titleterm, position, newsid, index_titleterm2news)
+                    position = position + 1
                 # Una iteración por cada categoría de la noticia
                 for keyword in categorias:
                     # Indexación de la categoría
@@ -159,11 +173,18 @@ def doc_walker(docsdir, indexdir):
                 newsid = newsid + 1
                 posindoc = posindoc + 1
             docid = docid + 1
+            if docid % 25 == 0:
+                print("{} documentos procesados".format(docid))
 
+    print("Guardando los índices")
     objects2save = (
         index_news2docid, index_docid2path, index_term2news, index_permuterm,
         index_titleterm2news, index_date2news, index_keyword2news)
     save_object(objects2save, indexdir)
+    print("Proceso finalizado")
+    print("{} documentos procesados".format(docid))
+
+
 
 def syntax():
     print(

@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Mapping, Any
 from bisect import bisect_left
+from random import randint
 
 @dataclass
 class TrieNode:
@@ -24,7 +25,7 @@ class TrieNode:
         Node ID
     """
     char: str = ""
-    children: Mapping[int, Any] = field(default_factory=dict)
+    children: Mapping[str, Any] = field(default_factory=dict)
     father: Any = None
     end_state: bool = False
     depth: int = 0
@@ -36,11 +37,13 @@ class TrieNode:
 
 
 @dataclass
-class Trie(object):
+class Trie():
     """
     Data structure
     Attributes
     ----------
+    desc: str
+        Description of the uses of the trie
     root : TrieNode
         Root node of the Trie
     size : int
@@ -48,7 +51,8 @@ class Trie(object):
     depth : int
         Length of the largest word included
     """
-    root: TrieNode = field(default=TrieNode())
+    desc: str = ""
+    root: TrieNode = field(default=TrieNode)
     size: int = 0
     depth: int = 0
 
@@ -74,7 +78,7 @@ class Trie(object):
         current_node.end_state = True
         return current_node
 
-    def to_list(self, ordered: bool = True):
+    def to_list(self):
         """
         Returns a list containing all the words of the trie
         Parameters
@@ -82,7 +86,7 @@ class Trie(object):
         ordered : bool
             Whether the list must be ordered or not
         """
-        prefixes = ["" for i in range(1, self.size+1)]
+        prefixes = {self.root.node_id:''}
         opened = list(self.root.children.values())
         res = []
         while opened:
@@ -91,19 +95,16 @@ class Trie(object):
             is_end_state = node.end_state
             for child in node.children.values():
                 opened.append(child)
-            prefixes[my_id] += node.char
+            my_prefix = prefixes[node.father.node_id] + node.char
+            prefixes[my_id] = my_prefix
             if is_end_state:
                 my_word = prefixes[my_id]
-                if ordered:
-                    index = bisect_left(res, my_word)
-                    res.insert(index, res)
-                else:
-                    res.append(my_word)
+                res.append(my_word)
             opened.remove(node)
         return res
 
     def __repr__(self):
-        res = "Trie\nSize:\t" + str(self.size) + " Depth: " + str(self.depth)
+        res = "Trie: " + self.desc + "\nSize:\t" + str(self.size) + " Depth: " + str(self.depth)
         res += "\nAllNodes:\n========\n" + str(self.root)
         opened = list(self.root.children.values())
         while opened:
@@ -119,10 +120,13 @@ class TrieNodeWithContent(TrieNode):
     content: Any = None
 
     def __repr__(self):
-        return super.__repr__() + " c= " + self.content
+        return "'" + self.char + "' " + "| id: " + str(self.node_id) + " | f: " \
+               + (str(self.father.node_id) if self.father else "[]") + " | end: " + str(
+            self.end_state) + " | d: " + str(self.depth) + " c= " + str(self.content)
 
 @dataclass
 class TrieDict(Trie):
+
     def add(self, key: str, value):
         """
         Adds a word and his associated value to the trie
@@ -139,11 +143,12 @@ class TrieDict(Trie):
             next_node = children.get(c, None)
             if not next_node:
                 self.size += 1
-                next_node = TrieNodeWithContent(c, {}, current_node, False, current_node.depth + 1, self.size, value)
+                next_node = TrieNodeWithContent(c, {}, current_node, False, current_node.depth + 1, self.size)
                 current_node.children[c] = next_node
                 if current_node.depth > self.depth:
                     self.depth = current_node.depth
             current_node = next_node
+        current_node.content = value
         current_node.end_state = True
 
     def reach_node(self, word: str, force: bool = False):
@@ -167,7 +172,6 @@ class TrieDict(Trie):
                     self.size += 1
                     new_node_depth = current_node.depth + 1
                     next_node = TrieNodeWithContent(c, {}, current_node, False, current_node.depth + 1, self.size, None)
-                    current_node.children[c] = next_node
                     if new_node_depth > self.depth:
                         self.depth = new_node_depth
                 else:
@@ -180,5 +184,28 @@ class TrieDict(Trie):
                 return None
         return current_node
 
+    def get(self, key: str):
+        """
+        Returns the content associated with the key if it does not exist
+        it returns None
+        ----------
+        word : str
+            Word associated with the content
+        """
+        node = self.reach_node(key)
+        if node:
+            return node.content
+        else:
+            return None
+
     def __repr__(self):
-        return super().__repr__()
+        res = "TrieDict: " + self.desc + "\nSize:\t" + str(self.size) + " Depth: " + str(self.depth)
+        res += "\nAllNodes:\n========\n" + str(self.root)
+        opened = list(self.root.children.values())
+        while opened:
+            node = opened[0]
+            for child in node.children.values():
+                opened.append(child)
+            res += "\n" + str(node)
+            opened.remove(node)
+        return res
