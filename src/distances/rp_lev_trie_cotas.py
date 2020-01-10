@@ -1,11 +1,15 @@
 import bisect
+import pickle
+import time
+
+from trie import Trie, TrieNode
 
 # diccionario para guardar los tries
 trie_dic = {}
 
 
-def lvrp(trie, palabra, maxima_distancia=float('inf')):
-    trie_dic[0] = (trie.root, '')
+def lvrp(tr, palabra, maxima_distancia=float('inf')):
+    trie_dic[0] = (tr.root, '')
 
     # { palabra : distancia } para comprobar si se logra una distancia mejor
     resultados = {}
@@ -108,6 +112,7 @@ def lvrp(trie, palabra, maxima_distancia=float('inf')):
                 # si no esta en OPEN, o esta en OPEN pero tiene una distancia mejor
                 pertenece_y_mejor = (hijo[1], hijo[2]) in abiertos and hijo[0] < abiertos[(hijo[1], hijo[2])]
                 no_pertenece = (hijo[1], hijo[2]) not in abiertos
+                
                 if no_pertenece or pertenece_y_mejor:
                     # insertamos en OPEN y ordena
                     abiertos[(hijo[1], hijo[2])] = hijo[0]
@@ -132,3 +137,14 @@ def get_min_leaf_depth(children):
         opened.extend(node.get_children())
 
         opened.remove(node)
+
+
+trie = Trie(root=TrieNode(node_id=163848))
+
+with open("C:/Users/mapei/Code/python/alt/trie_index", "rb") as fh:
+    t = pickle.load(fh)
+
+one=time.time()
+print(len(lvrp(t,"casa")))
+two=time.time()
+print(two-one)
